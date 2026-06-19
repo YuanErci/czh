@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>看看你和谁的匹配度最高！ — 二次元乐队成员测试</title>
+<style>
+/* ===== 全局 & 字体 ===== */
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Ma+Shan+Zheng&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Noto Sans JP', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 30%, #e1bee7 60%, #bbdefb 100%);
+  background-attachment: fixed;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ===== 樱花飘落 ===== */
+.petals {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 0; overflow: hidden;
+}
+.petal {
+  position: absolute; top: -60px;
+  font-size: 24px; opacity: 0.7;
+  animation: fall linear infinite;
+}
+@keyframes fall {
+  0%   { transform: translateY(0) rotate(0deg) scale(1); opacity: 0.9; }
+  50%  { opacity: 0.5; }
+  100% { transform: translateY(105vh) rotate(720deg) scale(0.3); opacity: 0; }
+}
+
+/* ===== 主容器 ===== */
+.container {
+  position: relative; z-index: 1;
+  width: 90%; max-width: 520px;
+  padding: 40px 0 60px;
+}
+
+/* ===== 标题 ===== */
+.title {
+  text-align: center; margin-bottom: 12px;
+}
+.title h1 {
+  font-family: 'Noto Sans JP', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  font-weight: 900;
+  background: linear-gradient(135deg, #e91e63, #9c27b0, #3f51b5);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.12));
+  line-height: 1.4;
+}
+.title .sub {
+  font-size: 0.9rem; color: #7b5e7b; margin-top: 4px;
+  letter-spacing: 2px;
+}
+
+/* ===== 输入卡片 ===== */
+.input-card {
+  background: rgba(255,255,255,0.85);
+  backdrop-filter: blur(16px);
+  border-radius: 24px; padding: 32px 28px;
+  box-shadow: 0 8px 32px rgba(156,39,176,0.15), 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 24px;
+}
+.input-card label {
+  display: block; font-weight: 700; font-size: 1rem;
+  color: #4a235a; margin-bottom: 10px;
+}
+.name-input {
+  width: 100%; padding: 14px 20px;
+  font-size: 1.1rem; border: 2px solid #e1bee7;
+  border-radius: 50px; outline: none;
+  background: #fff; color: #333;
+  transition: border 0.3s, box-shadow 0.3s;
+  font-family: inherit;
+}
+.name-input:focus {
+  border-color: #ce93d8;
+  box-shadow: 0 0 0 4px rgba(206,147,216,0.2);
+}
+.btn-row { display: flex; gap: 12px; margin-top: 16px; }
+.btn {
+  flex: 1; padding: 14px 0;
+  font-size: 1.05rem; font-weight: 700;
+  border: none; border-radius: 50px; cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  font-family: inherit; letter-spacing: 1px;
+}
+.btn:active { transform: scale(0.96); }
+.btn-primary {
+  background: linear-gradient(135deg, #e91e63, #9c27b0);
+  color: #fff; box-shadow: 0 4px 16px rgba(233,30,99,0.35);
+}
+.btn-primary:hover { box-shadow: 0 6px 24px rgba(233,30,99,0.5); }
+.btn-secondary {
+  background: #fff; color: #9c27b0;
+  border: 2px solid #e1bee7;
+}
+.btn-secondary:hover { background: #faf0fc; }
+
+/* ===== 结果卡片 ===== */
+.result-card {
+  background: rgba(255,255,255,0.9);
+  backdrop-filter: blur(16px);
+  border-radius: 24px; overflow: hidden;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.12);
+  display: none;
+  animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.result-card.show { display: block; }
+@keyframes popIn {
+  0% { transform: scale(0.7) translateY(30px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* --- 卡片头部（头像 + 乐队色条） --- */
+.card-header {
+  padding: 28px 24px 20px;
+  text-align: center;
+  position: relative;
+}
+.card-header .band-stripe {
+  position: absolute; top: 0; left: 0; right: 0; height: 6px;
+}
+.avatar-wrapper {
+  width: 120px; height: 120px;
+  border-radius: 50%; margin: 0 auto 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.2);
+  border: 4px solid var(--band-color, #9c27b0);
+  background: linear-gradient(135deg, #fce4ec, #f3e5f5);
+  display: flex; align-items: center; justify-content: center;
+}
+.avatar-img {
+  width: 100%; height: 100%;
+  object-fit: cover; display: block;
+}
+.avatar-fallback {
+  font-size: 3rem; display: none;
+}
+.member-name {
+  font-size: 1.5rem; font-weight: 900; color: #2d1633;
+}
+.member-role {
+  display: inline-block; margin-top: 6px;
+  padding: 4px 16px; border-radius: 20px;
+  font-size: 0.85rem; font-weight: 700;
+  color: #fff;
+  background: var(--band-color, #9c27b0);
+}
+
+/* --- 卡片主体 --- */
+.card-body { padding: 6px 24px 24px; text-align: center; }
+.band-name {
+  font-size: 1.1rem; font-weight: 700;
+  color: var(--band-color, #9c27b0);
+  margin-bottom: 12px; letter-spacing: 1px;
+}
+.intro {
+  color: #555; font-size: 0.95rem; line-height: 1.7;
+  margin-bottom: 16px;
+}
+.song-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 8px 18px; border-radius: 25px;
+  font-size: 0.9rem; font-weight: 700;
+  background: #fff8e1; color: #e65100;
+  border: 1px dashed #ffcc02;
+}
+.song-tag::before { content: '🎵'; }
+
+/* --- 卡片底部（分享） --- */
+.card-footer {
+  padding: 16px 24px;
+  border-top: 1px solid #f3e5f5;
+  display: flex; gap: 10px; flex-wrap: wrap;
+  justify-content: center;
+}
+.btn-share {
+  padding: 10px 20px; border-radius: 50px;
+  font-size: 0.9rem; font-weight: 700; cursor: pointer;
+  border: none; transition: transform 0.2s; font-family: inherit;
+}
+.btn-share:active { transform: scale(0.95); }
+.btn-copy {
+  background: #e8f5e9; color: #2e7d32;
+}
+.btn-retry {
+  background: #fce4ec; color: #c62828;
+}
+
+/* ===== 页脚 ===== */
+.footer {
+  text-align: center; margin-top: 32px;
+  color: #b39ddb; font-size: 0.8rem;
+  letter-spacing: 1px;
+}
+
+/* ===== 响应式 ===== */
+@media (max-width: 480px) {
+  .container { padding: 24px 8px 40px; }
+  .input-card { padding: 24px 18px; }
+  .btn-row { flex-direction: column; }
+  .card-body { padding: 4px 16px 20px; }
+  .member-name { font-size: 1.3rem; }
+}
+</style>
+</head>
+<body>
+
+<!-- 樱花花瓣 -->
+<div class="petals" id="petals"></div>
+
+<!-- 主容器 -->
+<div class="container">
+
+  <!-- 标题 -->
+  <div class="title">
+    <h1>✨ 看看你和谁的匹配度最高！</h1>
+    <p class="sub">— 输入你的名字，找出你的乐队归属 —</p>
+  </div>
+
+  <!-- 输入卡片 -->
+  <div class="input-card">
+    <label for="nameInput">✨ 请输入你的名字：</label>
+    <input type="text" id="nameInput" class="name-input"
+           placeholder="例如：香澄、Yukina、Tomori..."
+           maxlength="60" autocomplete="off">
+    <div class="btn-row">
+      <button class="btn btn-primary" id="btnTest" onclick="doTest()">
+        🎤 开始测试！
+      </button>
+      <button class="btn btn-secondary" id="btnRandom" onclick="doRandom()">
+        🎲 随机一个
+      </button>
+    </div>
+  </div>
+
+  <!-- 结果卡片 -->
+  <div class="result-card" id="resultCard">
+    <div class="card-header">
+      <div class="band-stripe" style="background: var(--band-color)"></div>
+      <div class="avatar-wrapper">
+        <img class="avatar-img" id="avatarImg" src="" alt=""
+             onerror="this.style.display='none';document.getElementById('avatarFallback').style.display='block';">
+        <span class="avatar-fallback" id="avatarFallback" style="display:none;"></span>
+      </div>
+      <div class="member-name" id="memberName"></div>
+      <div class="member-role" style="background: var(--band-color)" id="memberRole"></div>
+    </div>
+    <div class="card-body">
+      <div class="band-name" style="color: var(--band-color)" id="bandName"></div>
+      <p class="intro" id="memberIntro"></p>
+      <span class="song-tag" id="bandSong"></span>
+    </div>
+    <div class="card-footer">
+      <button class="btn-share btn-copy" onclick="copyResult()">📋 复制结果</button>
+      <button class="btn-share btn-retry" onclick="resetTest()">🔄 再测一次</button>
+    </div>
+  </div>
+
+  <p class="footer">✨ 涵盖 BanG Dream! · GBC · 轻音 · 凉宫 · 孤独摇滚 ✨<br>网页作者：CIRCLE缘 + deepseekV4Pro</p>
+</div>
+
+<script>
+// ==================== 成员数据 ====================
+//
+// ★ 如何替换角色图片（从萌娘百科获取）：
+// 1. 打开 https://zh.moegirl.org.cn
+// 2. 搜索角色名字（如 "户山香澄"）
+// 3. 点击页面右侧信息栏（infobox）中的头像图片
+// 4. 在新页面中右键图片 → "复制图片地址"
+// 5. 把地址粘贴到下方对应成员的 img:'' 中（两个单引号之间）
+//
+// 示例：
+//   img:'https://img.moegirl.org.cn/common/thumb/2/2e/Kasumi_Toyama.png/250px-Kasumi_Toyama.png',
+//
+// 注意：
+// - 如果 img 为空，会自动显示 emoji 占位符
+// - 建议选择 250px 或 280px 宽度的缩略图，加载更快
+// - 也可以使用其他图片源，只要填入完整 URL 即可
+// - 如果图片加载失败，会自动回退到 emoji 显示
+//
+const members = [
+  // ---- Poppin'Party (0-4) ----
+  { name:'户山香澄 (Kasumi)', role:'🎤 主唱 & 吉他', band:'Poppin\'Party',
+    color:'#FF6B9D', emoji:'🎸',
+    img:'images/kasumi.png',
+    intro:'性格开朗乐观，总是充满好奇心与行动力。在感受到"星之鼓动"后组建了 Poppin\'Party，用闪闪发光的心意歌唱。',
+    song:'ときめきエクスペリエンス！' },
+  { name:'花园多惠 (Tae)', role:'🎸 主音吉他', band:'Poppin\'Party',
+    color:'#FF6B9D', emoji:'🐰',
+    img:'images/tae.png',
+    intro:'天然呆的天才吉他手，在 live house 打工时被香澄发掘。养了20多只兔子，对音乐极度专注。',
+    song:'ときめきエクスペリエンス！' },
+  { name:'牛込里美 (Rimi)', role:'🎸 贝斯', band:'Poppin\'Party',
+    color:'#FF6B9D', emoji:'🍫',
+    img:'images/rimi.png',
+    intro:'温柔的贝斯手，喜欢巧克力螺旋面包。有点胆小但内心坚强，是乐队的温柔支柱。',
+    song:'ときめきエクスペリエンス！' },
+  { name:'山吹沙绫 (Saaya)', role:'🥁 鼓手', band:'Poppin\'Party',
+    color:'#FF6B9D', emoji:'🥖',
+    img:'images/saaya.png',
+    intro:'元气满满的鼓手，家里开面包店。乐于助人的大姐姐性格，是乐队的开心果。',
+    song:'ときめきエクスペリエンス！' },
+  { name:'市谷有咲 (Arisa)', role:'🎹 键盘', band:'Poppin\'Party',
+    color:'#FF6B9D', emoji:'🏮',
+    img:'images/arisa.png',
+    intro:'傲娇的天才键盘手，家里是当铺。嘴上不饶人但内心温柔，是乐队的吐槽担当。',
+    song:'ときめきエクスペリエンス！' },
+
+  // ---- Roselia (5-9) ----
+  { name:'凑友希那 (Yukina)', role:'🎤 主唱', band:'Roselia',
+    color:'#7B2D8E', emoji:'🌹',
+    img:'images/yukina.png',
+    intro:'Roselia 的绝对领袖，拥有压倒性的歌唱力。以"音乐就是全部"为信念，追求极致的舞台表现。',
+    song:'BLACK SHOUT' },
+  { name:'冰川纱夜 (Sayo)', role:'🎸 吉他', band:'Roselia',
+    color:'#7B2D8E', emoji:'❄️',
+    img:'images/sayo.png',
+    intro:'冷静沉着的吉他手，技术精湛。与双胞胎妹妹日菜有着复杂的情感，在音乐中找到了自己的道路。',
+    song:'BLACK SHOUT' },
+  { name:'今井莉莎 (Lisa)', role:'🎸 贝斯', band:'Roselia',
+    color:'#7B2D8E', emoji:'💄',
+    img:'images/lisa.png',
+    intro:'时尚又温柔的贝斯手，友希那的青梅竹马。善于照顾人，是乐队中不可或缺的调和者。',
+    song:'BLACK SHOUT' },
+  { name:'宇田川亚子 (Ako)', role:'🥁 鼓手', band:'Roselia',
+    color:'#7B2D8E', emoji:'🦇',
+    img:'images/ako.png',
+    intro:'充满中二病的鼓手，憧憬"帅气的世界"。姐姐是 Afterglow 的鼓手巴，两人感情深厚。',
+    song:'BLACK SHOUT' },
+  { name:'白金燐子 (Rinko)', role:'🎹 键盘', band:'Roselia',
+    color:'#7B2D8E', emoji:'💎',
+    img:'images/rinko.png',
+    intro:'内向怕生的键盘手，但内心有着强大的热情。在游戏中找到自信，逐渐成长为出色的表演者。',
+    song:'BLACK SHOUT' },
+
+  // ---- RAISE A SUILEN (10-14) ----
+  { name:'LAYER (和奏蕾)', role:'🎤 主唱 & 贝斯', band:'RAISE A SUILEN',
+    color:'#00BCD4', emoji:'🎧',
+    img:'images/layer.svg',
+    intro:'RAS 的主唱兼贝斯手，拥有极具穿透力的嗓音。以专业实力征服舞台，是乐队的核心灵魂。',
+    song:'R·I·O·T' },
+  { name:'LOCK (朝日六花)', role:'🎸 吉他', band:'RAISE A SUILEN',
+    color:'#00BCD4', emoji:'🔒',
+    img:'images/lock.png',
+    intro:'Poppin\'Party 的粉丝出身，吉他技术突飞猛进的天才少女。绰号 LOCK，对音乐充满热情。',
+    song:'R·I·O·T' },
+  { name:'MASKING (佐藤增姬)', role:'🥁 鼓手', band:'RAISE A SUILEN',
+    color:'#00BCD4', emoji:'🎭',
+    img:'images/masking.svg',
+    intro:'实力超强的鼓手，有着专业的音乐背景。外表冷酷但内心温柔，被 CHU² 发掘加入 RAS。',
+    song:'R·I·O·T' },
+  { name:'PAREO (鳰原令王那)', role:'🎹 键盘', band:'RAISE A SUILEN',
+    color:'#00BCD4', emoji:'🌈',
+    img:'images/pareo.png',
+    intro:'CHU² 的忠实追随者，键盘技术一流。性格开朗活泼，对 CHU² 有着近乎狂热的崇拜。',
+    song:'R·I·O·T' },
+  { name:'CHU² (珠手知由)', role:'🎧 DJ & 制作人', band:'RAISE A SUILEN',
+    color:'#00BCD4', emoji:'👑',
+    img:'images/chuchu.png',
+    intro:'天才少女音乐制作人，RAS 的创建者。用实力说话，目标是打造最强的女子乐队。',
+    song:'R·I·O·T' },
+
+  // ---- Morfonica (15-19) ----
+  { name:'仓田真白 (Mashiro)', role:'🎤 主唱', band:'Morfonica',
+    color:'#FF9500', emoji:'🦋',
+    img:'images/mashiro.png',
+    intro:'憧憬着"闪闪发光"的世界的少女，在月之森女子学园组建了 Morfonica。拥有清澈透明的声音。',
+    song:'Daylight -デイライト-' },
+  { name:'桐谷透子 (Toko)', role:'🎸 吉他', band:'Morfonica',
+    color:'#FF9500', emoji:'✨',
+    img:'images/toko.png',
+    intro:'开朗自信的吉他手，在社交网络上也很活跃。喜欢一切闪闪发光的事物。',
+    song:'Daylight -デイライト-' },
+  { name:'广町七深 (Nanami)', role:'🎸 贝斯', band:'Morfonica',
+    color:'#FF9500', emoji:'🌊',
+    img:'images/nanami.png',
+    intro:'温柔稳重的贝斯手，给人一种安心感。默默地支持着乐队的大家。',
+    song:'Daylight -デイライト-' },
+  { name:'二叶筑紫 (Tsukushi)', role:'🥁 鼓手', band:'Morfonica',
+    color:'#FF9500', emoji:'🍀',
+    img:'images/tsukushi.png',
+    intro:'努力型的鼓手，认真负责的班长性格。虽然不显眼但是乐队的重要基石。',
+    song:'Daylight -デイライト-' },
+  { name:'八潮瑠唯 (Rui)', role:'🎻 小提琴', band:'Morfonica',
+    color:'#FF9500', emoji:'🎻',
+    img:'images/rui.png',
+    intro:'冷静沉着的小提琴手，在古典音乐方面有着深厚造诣。为 Morfonica 带来了独特的音色。',
+    song:'Daylight -デイライト-' },
+
+  // ---- MyGO!!!!! (20-24) ----
+  { name:'高松灯 (Tomori)', role:'🎤 主唱', band:'MyGO!!!!!',
+    color:'#4A90D9', emoji:'💡',
+    img:'images/tomori.png',
+    intro:'MyGO!!!!! 的主唱，曾经因过去的创伤而无法唱歌，但在伙伴们的支持下重新站上舞台。',
+    song:'迷星叫' },
+  { name:'千早爱音 (Anon)', role:'🎸 吉他', band:'MyGO!!!!!',
+    color:'#4A90D9', emoji:'🎀',
+    img:'images/anon.png',
+    intro:'元气满满的吉他手，行动力超强。虽然吉他还不熟练但用热情感染着身边的人。',
+    song:'迷星叫' },
+  { name:'要乐奈 (Rāna)', role:'🎸 吉他', band:'MyGO!!!!!',
+    color:'#4A90D9', emoji:'🐱',
+    img:'images/rana.png',
+    intro:'像猫一样自由奔放的天才吉他手，SPACE 的传说吉他手的孙女。只用感觉就能弹奏出动人的旋律。',
+    song:'迷星叫' },
+  { name:'长崎爽世 (Soyo)', role:'🎸 贝斯', band:'MyGO!!!!!',
+    color:'#4A90D9', emoji:'🫖',
+    img:'images/soyo.png',
+    intro:'优雅的大小姐贝斯手，擅长泡红茶。表面温柔但内心有着强烈的意志。',
+    song:'迷星叫' },
+  { name:'椎名立希 (Taki)', role:'🥁 鼓手', band:'MyGO!!!!!',
+    color:'#4A90D9', emoji:'🔥',
+    img:'images/taki.png',
+    intro:'认真努力的鼓手，对音乐有着严格的要求。虽然说话直接但其实非常重视伙伴。',
+    song:'迷星叫' },
+
+  // ---- Ave Mujica (25-29) ----
+  { name:'三角初华 / Doloris', role:'🎤 主唱 & 吉他', band:'Ave Mujica',
+    color:'#1B1B3A', emoji:'🌙',
+    img:'images/uika.png',
+    intro:'Ave Mujica 的主唱，戴着面具的神秘歌姬。舞台上的她散发着令人窒息的魅力。',
+    song:'黒のバースデイ' },
+  { name:'若叶睦 / Mortis', role:'🎸 吉他', band:'Ave Mujica',
+    color:'#1B1B3A', emoji:'🥀',
+    img:'images/mutsumi.png',
+    intro:'沉默寡言的吉他手，有着不可思议的氛围。弹奏出的音符仿佛来自另一个世界。',
+    song:'黒のバースデイ' },
+  { name:'八幡海铃 / Timoris', role:'🎸 贝斯', band:'Ave Mujica',
+    color:'#1B1B3A', emoji:'🌊',
+    img:'images/umiri.png',
+    intro:'冷静沉着的贝斯手，同时也是多个乐队的支援乐手。在 Ave Mujica 中找到了归属。',
+    song:'黒のバースデイ' },
+  { name:'祐天寺若麦 / Amoris', role:'🥁 鼓手', band:'Ave Mujica',
+    color:'#1B1B3A', emoji:'💜',
+    img:'images/nyamu.png',
+    intro:'热情洋溢的鼓手，用激烈的鼓点驱动着 Ave Mujica 的暗黑世界观。',
+    song:'黒のバースデイ' },
+  { name:'丰川祥子 / Oblivionis', role:'🎹 键盘', band:'Ave Mujica',
+    color:'#1B1B3A', emoji:'🕯️',
+    img:'images/sakiko.png',
+    intro:'Ave Mujica 的键盘手与策划者。曾经是 CRYCHIC 的成员，有着复杂的过去。',
+    song:'黒のバースデイ' },
+
+  // ---- Afterglow (30-34) ----
+  { name:'美竹兰 (Ran)', role:'🎤 主唱 & 吉他', band:'Afterglow',
+    color:'#E53935', emoji:'🌸',
+    img:'images/ran.png',
+    intro:'Afterglow 的主唱兼吉他手，继承了花道家族的意志。用歌声传达着"和伙伴们一起"的信念。',
+    song:'That Is How I Roll!' },
+  { name:'青叶摩卡 (Moca)', role:'🎸 吉他', band:'Afterglow',
+    color:'#E53935', emoji:'🍞',
+    img:'images/moca.png',
+    intro:'慵懒又独特的吉他手，说话慢悠悠的。是兰的青梅竹马，两人之间有着深厚的羁绊。',
+    song:'That Is How I Roll!' },
+  { name:'上原绯玛丽 (Himari)', role:'🎸 贝斯', band:'Afterglow',
+    color:'#E53935', emoji:'🌟',
+    img:'images/himari.png',
+    intro:'活泼开朗的贝斯手，是 Afterglow 的队长。虽然有时笨手笨脚但充满感染力。',
+    song:'That Is How I Roll!' },
+  { name:'宇田川巴 (Tomoe)', role:'🥁 鼓手', band:'Afterglow',
+    color:'#E53935', emoji:'🥁',
+    img:'images/tomoe.png',
+    intro:'可靠的大姐头鼓手，Roselia 鼓手亚子的姐姐。性格豪爽，是 Afterglow 的定心丸。',
+    song:'That Is How I Roll!' },
+  { name:'羽泽鸫 (Tsugumi)', role:'🎹 键盘', band:'Afterglow',
+    color:'#E53935', emoji:'☕',
+    img:'images/tsugumi.png',
+    intro:'温柔细心的键盘手，家里是羽泽咖啡店。总是默默地为伙伴们准备好一切。',
+    song:'That Is How I Roll!' },
+
+  // ---- Pastel*Palettes (35-39) ----
+  { name:'丸山彩 (Aya)', role:'🎤 主唱', band:'Pastel*Palettes',
+    color:'#FFC107', emoji:'🍬',
+    img:'images/aya.png',
+    intro:'Pastel*Palettes 的 center，可爱的偶像主唱。虽然容易紧张但从不放弃，努力家精神满满。',
+    song:'しゅわりん☆どり〜みん' },
+  { name:'冰川日菜 (Hina)', role:'🎸 吉他', band:'Pastel*Palettes',
+    color:'#FFC107', emoji:'⭐',
+    img:'images/hina.png',
+    intro:'天才吉他手，Roselia 纱夜的双胞胎妹妹。学什么都很快，但也在寻找着只有自己才能做到的事。',
+    song:'しゅわりん☆どり〜みん' },
+  { name:'白鹭千圣 (Chisato)', role:'🎸 贝斯', band:'Pastel*Palettes',
+    color:'#FFC107', emoji:'🦢',
+    img:'images/chisato.png',
+    intro:'优雅的贝斯手，童星出身的演员。表面完美但其实有着不服输的一面。',
+    song:'しゅわりん☆どり〜みん' },
+  { name:'大和麻弥 (Maya)', role:'🥁 鼓手', band:'Pastel*Palettes',
+    color:'#FFC107', emoji:'🔧',
+    img:'images/maya.png',
+    intro:'器材宅的鼓手，对各种乐器设备了如指掌。在舞台上展现了与平时完全不同的帅气一面。',
+    song:'しゅわりん☆どり〜みん' },
+  { name:'若宫伊芙 (Eve)', role:'🎹 键盘', band:'Pastel*Palettes',
+    color:'#FFC107', emoji:'🗡️',
+    img:'images/eve.png',
+    intro:'日裔芬兰人，热爱"武士道"文化。用独特的感性为 Pastel*Palettes 增添了别样的色彩。',
+    song:'しゅわりん☆どり〜みん' },
+
+  // ---- Hello, Happy World! (40-44) ----
+  { name:'弦卷心 (Kokoro)', role:'🎤 主唱', band:'Hello, Happy World!',
+    color:'#34C759', emoji:'🌈',
+    img:'images/kokoro.png',
+    intro:'永远笑容满面的主唱，弦卷集团的千金。目标是"让全世界都露出笑容"的快乐音乐。',
+    song:'えがおのオーケストラ！' },
+  { name:'濑田薰 (Kaoru)', role:'🎸 吉他', band:'Hello, Happy World!',
+    color:'#34C759', emoji:'🌹',
+    img:'images/kaoru.png',
+    intro:'自称"虚幻的王子"的吉他手，戏剧部的明星。虽然说话浮夸，但为人真诚且温柔。',
+    song:'えがおのオーケストラ！' },
+  { name:'北泽育美 (Hagumi)', role:'🎸 贝斯', band:'Hello, Happy World!',
+    color:'#34C759', emoji:'🥎',
+    img:'images/hagumi.png',
+    intro:'元气爆棚的贝斯手，垒球部的王牌。用无限的活力驱动着 HHW 的快乐节奏。',
+    song:'えがおのオーケストラ！' },
+  { name:'松原花音 (Kanon)', role:'🥁 鼓手', band:'Hello, Happy World!',
+    color:'#34C759', emoji:'💙',
+    img:'images/kanon.png',
+    intro:'容易迷路的鼓手，性格温柔内向。被心强行拉入乐队后，发现了音乐中的快乐。',
+    song:'えがおのオーケストラ！' },
+  { name:'奥泽美咲 / 米歇尔', role:'🎧 DJ / 布偶装', band:'Hello, Happy World!',
+    color:'#34C759', emoji:'🐻',
+    img:'images/misaki.png',
+    intro:'HHW 的 DJ 兼吐槽担当，穿着粉红熊布偶装"米歇尔"登台。虽然经常抱怨但其实是乐队最靠谱的人。',
+    song:'えがおのオーケストラ！' },
+
+  // ---- トゲナシトゲアリ / Togenashi Togeari (45-49) ----
+  { name:'井芹仁菜 (Nina)', role:'🎤 主唱', band:'トゲナシトゲアリ',
+    color:'#FF6B35', emoji:'💥',
+    img:'images/nina.svg',
+    intro:'从乡下来到东京的女高中生，因被偶像团体背叛而辍学。在桃香的引导下开始音乐之路，歌声中充满愤怒与希望。',
+    song:'空白とカタルシス' },
+  { name:'河原木桃香 (Momoka)', role:'🎸 吉他', band:'トゲナシトゲアリ',
+    color:'#FF6B35', emoji:'🎸',
+    img:'images/momoka.svg',
+    intro:'前职业乐队成员，现在是街头音乐人。发现了仁菜的潜力并引导她走上舞台，是乐队的领路人。',
+    song:'空白とカタルシス' },
+  { name:'安和昴 (Subaru)', role:'🥁 鼓手', band:'トゲナシトゲアリ',
+    color:'#FF6B35', emoji:'🥁',
+    img:'images/subaru.svg',
+    intro:'冷静的鼓手，在排练室被仁菜和桃香发掘。外表文静但打起鼓来充满力量。',
+    song:'空白とカタルシス' },
+  { name:'海老冢智 (Tomo)', role:'🎹 键盘', band:'トゲナシトゲアリ',
+    color:'#FF6B35', emoji:'🎹',
+    img:'images/tomo.svg',
+    intro:'沉默寡言的键盘手，总是戴着耳机。用音乐表达着无法用语言传达的情感。',
+    song:'空白とカタルシス' },
+  { name:'Rupa', role:'🎸 贝斯', band:'トゲナシトゲアリ',
+    color:'#FF6B35', emoji:'🎵',
+    img:'images/rupa.svg',
+    intro:'神秘的贝斯手，有着深厚的音乐功底。默默地支持着乐队，是可靠的节奏基石。',
+    song:'空白とカタルシス' },
+
+  // ---- 放学后茶会 HTT (50-54) ----
+  { name:'平泽唯 (Yui)', role:'🎤 主唱 & 吉他', band:'放学后茶会 (HTT)',
+    color:'#5AC8FA', emoji:'🍰',
+    img:'images/yui.png',
+    intro:'天然呆的绝对音感女孩，从零开始学吉他却拥有惊人的音乐天赋。最喜欢放学后的茶会和甜点时间。',
+    song:'ふわふわ時間' },
+  { name:'秋山澪 (Mio)', role:'🎸 贝斯', band:'放学后茶会 (HTT)',
+    color:'#5AC8FA', emoji:'🎀',
+    img:'images/mio.png',
+    intro:'害羞的贝斯手兼作词担当，成绩优秀的优等生。虽然怕恐怖故事但写出了很棒的歌词。',
+    song:'ふわふわ時間' },
+  { name:'田井中律 (Ritsu)', role:'🥁 鼓手', band:'放学后茶会 (HTT)',
+    color:'#5AC8FA', emoji:'🥁',
+    img:'images/ritsu.png',
+    intro:'元气满满的鼓手兼部长，唯的青梅竹马。行动力超强但经常忘记交活动申请。',
+    song:'ふわふわ時間' },
+  { name:'琴吹䌷 (Tsumugi)', role:'🎹 键盘', band:'放学后茶会 (HTT)',
+    color:'#5AC8FA', emoji:'☕',
+    img:'images/tsumugi.png',
+    intro:'温柔的大小姐键盘手，家里是玩具公司。总是为大家准备好茶和点心，是轻音部的温暖后盾。',
+    song:'ふわふわ時間' },
+  { name:'中野梓 (Azusa)', role:'🎸 吉他', band:'放学后茶会 (HTT)',
+    color:'#5AC8FA', emoji:'🐱',
+    img:'images/azusa.png',
+    intro:'认真的后辈吉他手，被唯等人亲切地称为"梓喵"。虽然经常吐槽前辈们的不靠谱但深爱着轻音部。',
+    song:'ふわふわ時間' },
+
+  // ---- ENOZ (55-56) ----
+  { name:'凉宫春日 (Haruhi)', role:'🎤 主唱 & 吉他', band:'ENOZ',
+    color:'#AF52DE', emoji:'🌟',
+    img:'images/haruhi.png',
+    intro:'SOS团的团长大人！在文化祭上临时代替受伤的乐队成员登台演唱，一曲 God knows... 震惊全场。',
+    song:'God knows...' },
+  { name:'长门有希 (Yuki)', role:'🎸 吉他', band:'ENOZ',
+    color:'#AF52DE', emoji:'📖',
+    img:'images/yuki_nagato.png',
+    intro:'宇宙人界面终端，平时沉默寡言但弹吉他是隐藏技能。在文化祭上与春日一起完成了一场传奇演出。',
+    song:'God knows...' },
+
+  // ---- 结束乐队 / Kessoku Band (57-60) ----
+  { name:'后藤一里 / 波奇酱', role:'🎸 吉他', band:'结束乐队',
+    color:'#FF2D55', emoji:'💀',
+    img:'images/bocchi.png',
+    intro:'社交恐惧症的吉他英雄，在网上以"吉他英雄"名义发布演奏视频。为了改变自己而加入乐队，是隐藏的吉他天才。',
+    song:'青春コンプレックス' },
+  { name:'伊地知虹夏 (Nijika)', role:'🥁 鼓手', band:'结束乐队',
+    color:'#FF2D55', emoji:'☀️',
+    img:'images/nijika.png',
+    intro:'阳光开朗的鼓手，结束乐队的队长。用温暖的笑容和坚定的信念支撑着整个乐队。',
+    song:'青春コンプレックス' },
+  { name:'山田凉 (Ryo)', role:'🎸 贝斯', band:'结束乐队',
+    color:'#FF2D55', emoji:'❄️',
+    img:'images/ryo.png',
+    intro:'冷酷又帅气的贝斯手，波奇的第一个朋友。看似冷漠但其实对音乐有着执着的热爱。',
+    song:'青春コンプレックス' },
+  { name:'喜多郁代 (Kita)', role:'🎤 主唱 & 吉他', band:'结束乐队',
+    color:'#FF2D55', emoji:'🎤',
+    img:'images/kita.png',
+    intro:'阳光开朗的社交达人主唱，为了接近凉而加入乐队。虽然一开始吉他完全不会但进步神速。',
+    song:'青春コンプレックス' }
+];
+
+const TOTAL = members.length; // 61
+
+// ==================== 樱花动画 ====================
+function createPetals() {
+  const container = document.getElementById('petals');
+  const petalEmojis = ['🌸','🍂','💮','🌺','🍃'];
+  for (let i = 0; i < 30; i++) {
+    const petal = document.createElement('span');
+    petal.className = 'petal';
+    petal.textContent = petalEmojis[i % petalEmojis.length];
+    petal.style.left = Math.random() * 100 + '%';
+    petal.style.fontSize = (16 + Math.random() * 22) + 'px';
+    petal.style.animationDuration = (8 + Math.random() * 14) + 's';
+    petal.style.animationDelay = (Math.random() * 12) + 's';
+    petal.style.opacity = (0.3 + Math.random() * 0.5);
+    container.appendChild(petal);
+  }
+}
+createPetals();
+
+// ==================== 核心逻辑 ====================
+
+// 构建加权数组：MyGO!!!!! / Ave Mujica / Pastel*Palettes / トゲナシトゲアリ 概率翻倍
+const BOOST_BANDS = ['MyGO!!!!!', 'Ave Mujica', 'Pastel*Palettes', 'トゲナシトゲアリ'];
+const BOOST_WEIGHT = 2; // 翻倍权重
+const weightedIndices = [];
+members.forEach((m, i) => {
+  const weight = BOOST_BANDS.includes(m.band) ? BOOST_WEIGHT : 1;
+  for (let j = 0; j < weight; j++) {
+    weightedIndices.push(i);
+  }
+});
+const WEIGHTED_TOTAL = weightedIndices.length; // 81（41普通 + 20×2高权重）
+
+function getIndex(name) {
+  let sum = 0;
+  for (let i = 0; i < name.length; i++) {
+    sum += name.charCodeAt(i);
+  }
+  return weightedIndices[sum % WEIGHTED_TOTAL];
+}
+
+function doTest() {
+  const input = document.getElementById('nameInput');
+  const name = input.value.trim();
+  if (!name) {
+    input.focus();
+    input.style.borderColor = '#f44336';
+    input.style.boxShadow = '0 0 0 4px rgba(244,67,54,0.2)';
+    setTimeout(() => {
+      input.style.borderColor = '#e1bee7';
+      input.style.boxShadow = 'none';
+    }, 1500);
+    return;
+  }
+  // 特殊检测：circle缘 任意大小写 → 创始者页面
+  if (isFounderName(name)) {
+    showFounderResult(name);
+    return;
+  }
+  showResult(getIndex(name));
+}
+
+// 检测是否为 "circle缘" 的任意大小写组合
+function isFounderName(name) {
+  // 去掉中间可能的空格，统一小写
+  const cleaned = name.replace(/\s+/g, '').toLowerCase();
+  // 匹配 "circle" + "缘" (或繁体"緣")
+  return /^circle[缘緣]$/.test(cleaned);
+}
+
+function doRandom() {
+  const randomIndex = Math.floor(Math.random() * TOTAL);
+  document.getElementById('nameInput').value = '🎲 随机生成';
+  showResult(randomIndex);
+}
+
+function showResult(index) {
+  const m = members[index];
+  const card = document.getElementById('resultCard');
+
+  // 设置 CSS 变量
+  card.style.setProperty('--band-color', m.color);
+
+  // 填充数据
+  const imgEl = document.getElementById('avatarImg');
+  const fallbackEl = document.getElementById('avatarFallback');
+  if (m.img) {
+    imgEl.src = m.img;
+    imgEl.style.display = 'block';
+    fallbackEl.style.display = 'none';
+  } else {
+    imgEl.style.display = 'none';
+    fallbackEl.style.display = 'block';
+    fallbackEl.textContent = m.emoji;
+  }
+  document.getElementById('memberName').textContent = m.name;
+  document.getElementById('memberRole').textContent = m.role;
+  document.getElementById('memberRole').style.background = m.color;
+  document.getElementById('bandName').textContent = '🎸 ' + m.band;
+  document.getElementById('bandName').style.color = m.color;
+  document.getElementById('memberIntro').textContent = m.intro;
+  document.getElementById('bandSong').textContent = m.song;
+
+  // 显示卡片（触发动画）
+  card.classList.remove('show');
+  void card.offsetWidth; // 强制重排以重新触发动画
+  card.classList.add('show');
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+// 创始者专属页面
+function showFounderResult(inputName) {
+  const card = document.getElementById('resultCard');
+  card.style.setProperty('--band-color', '#e91e63');
+
+  // 使用千早爱音的图片
+  const imgEl = document.getElementById('avatarImg');
+  const fallbackEl = document.getElementById('avatarFallback');
+  imgEl.src = 'images/anon.png';
+  imgEl.style.display = 'block';
+  fallbackEl.style.display = 'none';
+
+  document.getElementById('memberName').textContent = 'CIRCLE缘';
+  document.getElementById('memberRole').textContent = '🌟 网页创始者';
+  document.getElementById('memberRole').style.background = '#e91e63';
+  document.getElementById('bandName').textContent = '🎸 MyGO!!!!!';
+  document.getElementById('bandName').style.color = '#4A90D9';
+  document.getElementById('memberIntro').textContent =
+    '这个网页的缔造者！用代码连接二次元与现实的桥梁，将13支乐队的灵魂注入每一行代码之中。带着对anisong的热爱，创造了这个充满魔法的测试。';
+  document.getElementById('bandSong').textContent = '创始者主题曲：迷星叫';
+
+  card.classList.remove('show');
+  void card.offsetWidth;
+  card.classList.add('show');
+  card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function resetTest() {
+  document.getElementById('nameInput').value = '';
+  document.getElementById('resultCard').classList.remove('show');
+  document.getElementById('nameInput').focus();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function copyResult() {
+  const mName = document.getElementById('memberName').textContent;
+  const mBand = document.getElementById('bandName').textContent;
+  const mRole = document.getElementById('memberRole').textContent;
+  const mSong = document.getElementById('bandSong').textContent;
+
+  const text = `✨ 看看你和谁的匹配度最高！✨\n\n🎤 你是：${mName}\n🎵 担当：${mRole}\n🎸 所属：${mBand}\n🎼 代表曲：${mSong}\n\n快来测测你和哪个二次元乐队成员匹配度最高吧！`;
+
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      alert('✅ 结果已复制到剪贴板！分享给朋友吧~');
+    });
+  } else {
+    // 降级方案
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed'; ta.style.left = '-9999px';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    alert('✅ 结果已复制到剪贴板！分享给朋友吧~');
+  }
+}
+
+// ==================== 键盘事件 ====================
+document.getElementById('nameInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') doTest();
+});
+</script>
+
+</body>
+</html>
